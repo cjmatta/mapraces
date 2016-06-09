@@ -30,17 +30,18 @@ NEW_ACES = {}
 def get_aces(f):
     aces = {}
     try:
-        current_aces = subprocess.check_output([HADOOP_BIN, 'mfs', '-getace', f])
-        print current_aces.split()
+        process = subprocess.Popen([HADOOP_BIN, 'mfs', '-getace', f],
+            stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+        (current_aces, errs) = process.communicate()
         for (index, value) in enumerate(current_aces.split()):
             if re.search('^.*\:', value):
                 (k, v) = value.split(':')
                 if k in PERMS:
                     aces[k] = v
         return aces
-    except CalledProcessError, e:
-        print e
-        sys.exit(1)
+    except CalledProcessError as e:
+        logger.warn("error running hadoop command")
+        sys.exit(e.returncode)
 
 # Build and run command
 def set_aces(f, aces, recursive, inherit, preservemodebits):
@@ -65,7 +66,7 @@ def set_aces(f, aces, recursive, inherit, preservemodebits):
         logger.info("Running command: %s" % ' '.join(command))
         subprocess.check_call(command)
     except CalledProcessError as e:
-        logger.warn(e.output)
+        logger.warn("errorr running hadoop command")
         sys.exit(e.returncode)
 
 def capture_ace(option, opt_str, value, parser):
@@ -84,8 +85,6 @@ def add_ace(current, new):
                                 set(current_expressions).union(new_expressions)
                                 )
                             )
-    print current
-    print new
     return final_aces
 
 def remove_ace(ace, current):
