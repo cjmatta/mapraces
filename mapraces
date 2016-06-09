@@ -77,21 +77,24 @@ def resolve_aces(current, new):
     final_aces = {}
     for perm in new:
         if current[perm] != '':
-            new_expressions = new[perm].split(',')
-            print new_expressions
-            current_expressions = current[perm].split(',')
-            print current_expressions
+            new_expressions = [x.strip() for x in new[perm].split('|')]
+            current_expressions = [x.strip() for x in current[perm].split('|')]
             # resolve duplicates and return list.
             final_aces[perm] = '|'.join(
                             list(
                                 set(current_expressions).union(new_expressions)
                                 )
                             )
-            print final_aces
     return final_aces
 
-def remove_ace(ace, current):
-    pass
+def remove_ace(current, new):
+    for perm in new:
+        ace_list = [x.strip() for x in current[perm].split('|')]
+        if new[perm] not in ace_list:
+            logger.warn("This entry not found in this ACE")
+        ace_list.remove(new[perm])
+        current[perm] = "|".join(ace_list)
+    return current
 
 class MyOptionParser(OptionParser):
     def error(self, msg):
@@ -101,9 +104,9 @@ class MyOptionParser(OptionParser):
 def main():
     parser = MyOptionParser()
     parser.add_option("-a", "--add", action="store_true", dest="addace",
-        help="Add ACE")
+        help="Add ACE - only supports OR statemetns: 'u:user1|u:user2'")
     parser.add_option("-d", "--delete", action="store_true", dest="delace",
-        help="Delete ACE")
+        help="Delete ACE entry: single entry item supported, u:user1")
     parser.add_option("-R", action="store_true", dest="recursive",
         help="Recursively set ACE")
     parser.add_option("--setinherit", dest="setinherit", metavar="[true|false]",
@@ -153,9 +156,10 @@ def main():
 
 
     current_aces = get_aces(args[0])
-    print current_aces
     if options.addace:
         final_aces = resolve_aces(current_aces, NEW_ACES)
+    if options.delace:
+        final_aces = remove_ace(current_aces, NEW_ACES)
 
     set_aces(args[0], final_aces, options.recursive, options.setinherit, options.preservemodebits)
 
