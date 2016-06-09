@@ -2,7 +2,9 @@ This is a small python wrapper around the `hadoop mfs -setace` command to simpli
 
 #### Why?
 
-When MapR ACEs get long and complicated adding a simple user or group statement requires running `hadoop mfs -getace FILE`, copying the current expression and adding the item, this script will do that for you.
+When MapR ACEs get long and complicated with many "OR" statements adding a single user or group statement requires running `hadoop mfs -getace FILE`, copying the current expression and adding the item, this script will do that for you.
+
+This is **NOT** a replacement for the default `hadoop mfs -setace` command, it's simply a method to simplify adding users to an OR statement. Currently it does not support the full logical expressions. This tool is simply meant to streamline situations that otherwise would be a hassle.
 
 #### Usage:
 
@@ -40,5 +42,5 @@ Options:
 
 ### TODO
 
--	Implement the `--delete` flag
--	Test with more complicated ACEs
+-	[x] Implement the `--delete` flag
+-	[ ] Test with more complicated ACEs
