@@ -33,11 +33,10 @@ def get_aces(f):
         process = subprocess.Popen([HADOOP_BIN, 'mfs', '-getace', f],
             stdout=subprocess.PIPE, stderr=subprocess.PIPE)
         (current_aces, errs) = process.communicate()
-        for (index, value) in enumerate(current_aces.split()):
-            if re.search('^.*\:', value):
-                (k, v) = value.split(':')
-                if k in PERMS:
-                    aces[k] = v
+        for (index, value) in enumerate(current_aces.split("\n")):
+            if value.split(':', 1)[0].strip() in PERMS:
+                (k, v) = value.split(':', 1)
+                aces[k.strip()] = v.strip()
         return aces
     except CalledProcessError as e:
         logger.warn("error running hadoop command")
@@ -47,6 +46,7 @@ def get_aces(f):
 def set_aces(f, aces, recursive, inherit, preservemodebits):
     aces_list = [("-%s" % perm, aces[perm]) for perm in aces]
     aces_list = list(itertools.chain.from_iterable(aces_list))
+    print aces_list
     try:
         command = [HADOOP_BIN, 'mfs', '-setace']
         if recursive:
@@ -73,18 +73,21 @@ def capture_ace(option, opt_str, value, parser):
     NEW_ACES[option.dest] = value
 
 # Resolves the current and new ACE into a final ACE
-def add_ace(current, new):
+def resolve_aces(current, new):
     final_aces = {}
     for perm in new:
         if current[perm] != '':
             new_expressions = new[perm].split(',')
+            print new_expressions
             current_expressions = current[perm].split(',')
+            print current_expressions
             # resolve duplicates and return list.
-            final_aces[perm] = ','.join(
+            final_aces[perm] = '|'.join(
                             list(
                                 set(current_expressions).union(new_expressions)
                                 )
                             )
+            print final_aces
     return final_aces
 
 def remove_ace(ace, current):
@@ -150,11 +153,11 @@ def main():
 
 
     current_aces = get_aces(args[0])
-
+    print current_aces
     if options.addace:
-        add_ace(current_aces, NEW_ACES)
+        final_aces = resolve_aces(current_aces, NEW_ACES)
 
-    set_aces(args[0], NEW_ACES, options.recursive, options.setinherit, options.preservemodebits)
+    set_aces(args[0], final_aces, options.recursive, options.setinherit, options.preservemodebits)
 
 if __name__ == '__main__':
     main()
